@@ -1,2 +1,2 @@
 # CycleGAN
-experience gan for entainment
+# implement readme before run
