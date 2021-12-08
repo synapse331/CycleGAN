@@ -35,7 +35,7 @@ parser.add_argument("--img_height", type=int, default=256, help="size of image h
 parser.add_argument("--img_width", type=int, default=256, help="size of image width")
 parser.add_argument("--channels", type=int, default=3, help="number of image channels")
 parser.add_argument("--sample_interval", type=int, default=100, help="interval between saving generator outputs")
-parser.add_argument("--checkpoint_interval", type=int, default=-1, help="interval between saving model checkpoints")
+parser.add_argument("--checkpoint_interval", type=int, default=3, help="interval between saving model checkpoints") #default -1 for no saving check points
 parser.add_argument("--n_residual_blocks", type=int, default=9, help="number of residual blocks in generator")
 parser.add_argument("--lambda_cyc", type=float, default=10.0, help="cycle loss weight")
 parser.add_argument("--lambda_id", type=float, default=5.0, help="identity loss weight")
@@ -43,15 +43,15 @@ opt = parser.parse_args()
 print(opt)
 
 # Create sample and checkpoint directories
-os.makedirs("images/%s" % opt.dataset_name, exist_ok=True)
-os.makedirs("saved_models/%s" % opt.dataset_name, exist_ok=True)
+os.makedirs("./images/%s" % opt.dataset_name, exist_ok=True)
+os.makedirs("./saved_models/%s" % opt.dataset_name, exist_ok=True)
 
 # Losses
 criterion_GAN = torch.nn.MSELoss()
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
 
-cuda = torch.cuda.is_available()
+#cuda = torch.cuda.is_available()
 
 input_shape = (opt.channels, opt.img_height, opt.img_width)
 
@@ -61,14 +61,14 @@ G_BA = GeneratorResNet(input_shape, opt.n_residual_blocks)
 D_A = Discriminator(input_shape)
 D_B = Discriminator(input_shape)
 
-if cuda:
-    G_AB = G_AB.cuda()
-    G_BA = G_BA.cuda()
-    D_A = D_A.cuda()
-    D_B = D_B.cuda()
-    criterion_GAN.cuda()
-    criterion_cycle.cuda()
-    criterion_identity.cuda()
+#if cuda:
+G_AB = G_AB.cuda()
+G_BA = G_BA.cuda()
+D_A = D_A.cuda()
+D_B = D_B.cuda()
+criterion_GAN.cuda()
+criterion_cycle.cuda()
+criterion_identity.cuda()
 
 if opt.epoch != 0:
     # Load pretrained models
@@ -101,7 +101,7 @@ lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(
     optimizer_D_B, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step
 )
 
-Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
+Tensor = torch.cuda.FloatTensor #if cuda else torch.Tensor
 
 # Buffers of previously generated samples
 fake_A_buffer = ReplayBuffer()
@@ -109,7 +109,7 @@ fake_B_buffer = ReplayBuffer()
 
 # Image transformations
 transforms_ = [
-    transforms.Resize(int(opt.img_height * 1.12), Image.BICUBIC),
+    transforms.Resize(int(opt.img_height * 1.12), transforms.InterpolationMode.BICUBIC),
     transforms.RandomCrop((opt.img_height, opt.img_width)),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
@@ -118,14 +118,14 @@ transforms_ = [
 
 # Training data loader
 dataloader = DataLoader(
-    ImageDataset("../../data/%s" % opt.dataset_name, transforms_=transforms_, unaligned=True),
+    ImageDataset("./data/%s" % opt.dataset_name, transforms_=transforms_, unaligned=True),
     batch_size=opt.batch_size,
     shuffle=True,
     num_workers=opt.n_cpu,
 )
 # Test data loader
 val_dataloader = DataLoader(
-    ImageDataset("../../data/%s" % opt.dataset_name, transforms_=transforms_, unaligned=True, mode="test"),
+    ImageDataset("./data/%s" % opt.dataset_name, transforms_=transforms_, unaligned=True, mode="test"),
     batch_size=5,
     shuffle=True,
     num_workers=1,
@@ -278,7 +278,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
     if opt.checkpoint_interval != -1 and epoch % opt.checkpoint_interval == 0:
         # Save model checkpoints
-        torch.save(G_AB.state_dict(), "saved_models/%s/G_AB_%d.pth" % (opt.dataset_name, epoch))
-        torch.save(G_BA.state_dict(), "saved_models/%s/G_BA_%d.pth" % (opt.dataset_name, epoch))
-        torch.save(D_A.state_dict(), "saved_models/%s/D_A_%d.pth" % (opt.dataset_name, epoch))
-        torch.save(D_B.state_dict(), "saved_models/%s/D_B_%d.pth" % (opt.dataset_name, epoch))
+        torch.save(G_AB.state_dict(), "./saved_models/%s/G_AB_%d.pth" % (opt.dataset_name, epoch))
+        torch.save(G_BA.state_dict(), "./saved_models/%s/G_BA_%d.pth" % (opt.dataset_name, epoch))
+        torch.save(D_A.state_dict(), "./saved_models/%s/D_A_%d.pth" % (opt.dataset_name, epoch))
+        torch.save(D_B.state_dict(), "./saved_models/%s/D_B_%d.pth" % (opt.dataset_name, epoch))
